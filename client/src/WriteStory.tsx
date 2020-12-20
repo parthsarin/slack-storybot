@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Button, Col, Row } from 'react-bootstrap';
+import { Alert, Button, Col, Row } from 'react-bootstrap';
 import TextareaAutosize from 'react-autosize-textarea';
 import axios from 'axios';
 
@@ -143,6 +143,13 @@ export default class WriteStory extends Component<Props, State> {
     render() {
         return (
             <div className="write-container">
+                {
+                    this.state.error
+                    ? <Alert variant='danger'>
+                        <b>Something went wrong</b>: { this.state.error }
+                    </Alert>
+                    : null
+                }
                 { this.buildWriteBox() }
                 { this.buildButtonBar() }
             </div>
