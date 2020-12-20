@@ -6,6 +6,7 @@ Handles interactions with the database.
 """
 from flask import current_app
 from unqlite import UnQLite
+from typing import Callable
 
 DB_PATH = '{root}/stories.db'
 class LockError(ValueError):
@@ -18,6 +19,17 @@ def connect():
     Connects to the database and returns the database connection.
     """
     return UnQLite(DB_PATH.format(root=current_app.root_path))
+
+
+def get_stories(filter_criteria: Callable[[dict], bool] = lambda d: True):
+    """
+    Returns all stories that match the filter criteria.
+    """
+    db = connect()
+
+    with db.transaction():
+        stories = db.collection('stories')
+        return stories.filter(filter_criteria)
 
 
 def lock_story(story, username: str):
@@ -44,6 +56,27 @@ def unlock_story(story):
     """
     story['locked'] = False
     story['locked_by'] = None
+
+
+def lock_id(story_id: int, username: str):
+    """
+    Locks the story with the specified id by the specified user.
+
+    Arguments
+    ---------
+    story_id -- The id of the story to unlock.
+    username -- The user who wants to lock the story.
+    """
+    db = connect()
+
+    with db.transaction():
+        stories = db.collection('stories')
+        target_story = stories.fetch(story_id)
+
+        if not target_story['locked']:
+            lock_story(target_story, username)
+        else:
+            raise LockError("This story is already locked.")
 
 
 def unlock_id(story_id: int, username: str):

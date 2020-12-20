@@ -51,8 +51,7 @@ export default class WriteStory extends Component<Props, State> {
     buildButtonBar() {
         const showSubmit: boolean = Boolean(this.state.prevLine);
         const allowSubmit: boolean = Boolean(this.state.currLine);
-
-        console.log(`allowSubmit: ${allowSubmit}`);
+        
         return (
             <Row className="mt-2">
                 <Col className="text-center">
