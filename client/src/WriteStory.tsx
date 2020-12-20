@@ -10,7 +10,7 @@ interface Props {
 interface State {
     prevLine?: string,
     prevAuthor?: string,
-    currLine: string,
+    currLine?: string,
     currIndex?: number,
     maxLines?: number,
     error?: string,
@@ -22,9 +22,7 @@ export default class WriteStory extends Component<Props, State> {
     constructor(props: Props) {
         super(props);
 
-        this.state = {
-            currLine: ''
-        }
+        this.state = {}
 
         this.textarea = null;
     }
