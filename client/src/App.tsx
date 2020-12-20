@@ -29,7 +29,7 @@ const App: FunctionComponent<{}> = () => {
     return (
         <Container className="mt-2 mb-2">
             <h1>Hey, @{slackName}! 🖋</h1>
-            <p className="lead">
+            <p>
                 Not you?&nbsp;
                 <button 
                     className="link-button" 
