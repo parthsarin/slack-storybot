@@ -21,6 +21,7 @@ def write():
     for line in FIRST_LINES:
         with db.transaction():
             stories = db.collection('stories')
+            stories.create()
 
             # Are there stories that have the same first line?
             same_first_line = stories.filter(
