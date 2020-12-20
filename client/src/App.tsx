@@ -28,16 +28,17 @@ const App: FunctionComponent<{}> = () => {
     // Authenticated
     return (
         <Container className="mt-2 mb-2">
-            <h1>Hey, @{slackName}! 🖋</h1>
-            <p>
-                Not you?&nbsp;
-                <button 
-                    className="link-button" 
-                    onClick={() => setSlackName('')}>
-                    Re-authenticate here
-                </button>.
-            </p>
-
+            <div className="text-center header">
+                <h1>Hey, @{slackName}!</h1>
+                <p>
+                    Not you?&nbsp;
+                    <button 
+                        className="link-button" 
+                        onClick={() => setSlackName('')}>
+                        Re-authenticate here
+                    </button>.
+                </p>
+            </div>
             <WriteStory
                 username={slackName}
             />

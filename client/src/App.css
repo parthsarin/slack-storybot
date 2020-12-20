@@ -21,7 +21,6 @@
 .write-container {
     width: 100%;
     height: 100%;
-    padding: 10px;
 }
 
 .write-box {
@@ -71,7 +70,7 @@
     font-size: 14pt !important;
 }
 
-.new-story-btn:hover {
+.new-story-btn:hover:enabled {
     background-image: linear-gradient(to right, #6a49b6 0%, #993d7f 100%);
 }
 
@@ -82,6 +81,20 @@
     font-size: 14pt !important;
 }
 
-.submit-btn:hover {
+.submit-btn:hover:enabled {
     background-image: linear-gradient(to right, #09ce51 0%, #1388c3 100%);
+}
+
+.story-progress {
+    font-size: 14pt;
+    font-style: italic;
+    text-align: right;
+    display: block;
+}
+
+.story-progress-warn {
+    font-size: 14pt;
+    text-align: right;
+    display: block;
+    color: #dc3545 !important;
 }
