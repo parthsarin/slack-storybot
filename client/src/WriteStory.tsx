@@ -8,6 +8,7 @@ interface Props {
 }
 
 interface State {
+    storyId?: number,
     prevLine?: string,
     prevAuthor?: string,
     currLine?: string,
