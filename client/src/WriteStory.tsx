@@ -22,14 +22,16 @@ export default class WriteStory extends Component<Props, State> {
     constructor(props: Props) {
         super(props);
 
-        this.state = {}
+        this.state = {
+            currLine: ''
+        }
 
         this.textarea = null;
     }
 
     getNewLine() {
         axios
-            .post('/api/get_line', { 'user': this.props.username })
+            .post('/api/get_line', { username: this.props.username })
             .then(r => r.data)
             .then((data) => {
                 if (!data.error) {
