@@ -1,0 +1,14 @@
+[
+    {
+        "__id": 1,
+        "max_lines": 20, // The total number of lines before it gets posted
+        "locked": true,  // Whether someone is currently writing this sentence
+        "locked_by": "Albus Dumbledore",
+        "lines": [
+            {
+                "text": "Once upon a time, there was an amazing unicorn named Ruth Bader Ginsburg.",
+                "author": "Minerva McGonagall",
+            }
+        ]
+    }
+]

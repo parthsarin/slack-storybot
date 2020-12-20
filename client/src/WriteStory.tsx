@@ -32,7 +32,7 @@ export default class WriteStory extends Component<Props, State> {
 
     getNewLine() {
         axios
-            .post('/api/get_line', { username: this.props.username })
+            .post('/api/get_line', { username: this.props.username, storyId: this.state.storyId })
             .then(r => r.data)
             .then((data) => {
                 if (!data.error) {

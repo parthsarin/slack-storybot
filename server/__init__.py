@@ -15,6 +15,7 @@ SLACK_WEBHOOK = os.environ.get('SLACK_WEBHOOK')
 @app.route('/api/get_line', methods=['POST'])
 def get_line():
     username = request.json.get('username')
+    story_id = request.json.get('storyId')
     
     return {
         'prevLine': 'Once upon a time, there was an amazing unicorn named Ruth Bader Ginsburg.',
