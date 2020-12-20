@@ -28,12 +28,19 @@ const App: FunctionComponent<{}> = () => {
     // Authenticated
     return (
         <Container className="mt-2 mb-2">
-            <h1>Hey, @{slackName}!</h1>
+            <h1>Hey, @{slackName}! 🖋</h1>
             <p className="lead">
-                Not you? <a href='javascript:void(0)' onClick={() => setSlackName('')}>Re-authenticate here</a>.
+                Not you?&nbsp;
+                <button 
+                    className="link-button" 
+                    onClick={() => setSlackName('')}>
+                    Re-authenticate here
+                </button>.
             </p>
 
-            <WriteStory />
+            <WriteStory
+                username={slackName}
+            />
         </Container>
     );
 }
