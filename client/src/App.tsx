@@ -1,6 +1,8 @@
 import React, { FunctionComponent, useState } from 'react';
+import { Container } from 'react-bootstrap';
 import './App.css';
 import Authenticate from './Authenticate';
+import WriteStory from './WriteStory';
 
 const App: FunctionComponent<{}> = () => {
     // Get the slack name from local storage if it exists there
@@ -8,25 +10,32 @@ const App: FunctionComponent<{}> = () => {
         localStorage.getItem("slackName")
     );
 
-    if (slackName) {
-        // Authenticated
-        return (
-            <span>Authenticated as @{ slackName }</span>
-        );
-    } else {
+    if (!slackName) {
         // Not authenticated yet
         return (
-        <Authenticate 
-            onSubmit={
-                (newUsername) => {
-                    setSlackName(newUsername);
-                    localStorage.setItem('slackName', newUsername);
+            <Authenticate
+                onSubmit={
+                    (newUsername) => {
+                        setSlackName(newUsername);
+                        localStorage.setItem('slackName', newUsername);
+                    }
                 }
-            }
-            newUser={true}
-        />
-        )
+                newUser={localStorage.getItem('slackName') === null}
+            />
+        );
     }
+
+    // Authenticated
+    return (
+        <Container className="mt-2 mb-2">
+            <h1>Hey, @{slackName}!</h1>
+            <p className="lead">
+                Not you? <a href='javascript:void(0)' onClick={() => setSlackName('')}>Re-authenticate here</a>.
+            </p>
+
+            <WriteStory />
+        </Container>
+    );
 }
 
 export default App;
