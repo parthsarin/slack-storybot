@@ -6,7 +6,7 @@ import WriteStory from './WriteStory';
 
 interface User {
     username: string,
-    profile_image?: string,
+    profile_image?: string | null,
     first_name: string,
     last_name: string,
     slack_id?: string,

@@ -6,7 +6,7 @@ Handles interactions with the database.
 """
 from flask import current_app
 from unqlite import UnQLite
-from typing import Callable, Set, TypedDict
+from typing import Callable, Set, TypedDict, Union
 import time
 
 DB_PATH = '{root}/stories.db'
@@ -51,6 +51,28 @@ def add_user(user: User):
             raise UserExistsError("The user already exists.")
         else:
             users.store([user])
+
+
+def get_user_slack_id(display_name: str) -> Union[str, None]:
+    """
+    Gets the user's slack id from the database.
+
+    Arguments
+    ---------
+    display_name -- The display name of the user that is being searched for.
+    """
+    db = connect()
+
+    with db.transaction():
+        users = db.collection('users')
+        matches = users.filter(
+            lambda user: user['display_name'] == display_name
+        )
+
+        if matches:
+            return matches[0]['slack_id']
+        else:
+            return None
 
 
 def get_valid_stories(username: str, story_id_history: Set[int]):

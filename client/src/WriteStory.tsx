@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Alert, Button, Col, Row } from 'react-bootstrap';
+import { Alert, Button, Col, Row, Spinner } from 'react-bootstrap';
 import TextareaAutosize from 'react-autosize-textarea';
 import axios from 'axios';
 import { User } from './App';
@@ -14,7 +14,7 @@ interface State {
     writingNewStory?: boolean,
 
     prevLine?: string,
-    prevAuthor?: string,
+    prevAuthor?: User | null,
 
     currLine?: string,
     currIndex?: number,
@@ -22,6 +22,7 @@ interface State {
     maxLines?: number,
     
     error?: string,
+    loading: boolean,
 }
 
 export default class WriteStory extends Component<Props, State> {
@@ -32,7 +33,8 @@ export default class WriteStory extends Component<Props, State> {
 
         this.state = {
             storyIdHistory: [],
-            currLine: ''
+            currLine: '',
+            loading: false,
         }
 
         this.textarea = null;
@@ -42,6 +44,7 @@ export default class WriteStory extends Component<Props, State> {
     }
 
     getNewLine() {
+        this.setState({loading: true});
         axios
             .post('/api/get_line', { 
                 username: this.props.user.username, 
@@ -51,14 +54,16 @@ export default class WriteStory extends Component<Props, State> {
             .then(r => r.data)
             .then((data) => {
                 if (!data.error) {
+                    // Append to history
                     let newHistory = [...this.state.storyIdHistory];
                     if (data.storyId !== undefined) {
                         newHistory.push(data.storyId);
                     }
+
+                    // Inject data into state
                     this.setState({
-                        prevAuthor: '', 
                         ...data, 
-                        currLine: '', 
+                        currLine: '', // clear the textarea
                         storyIdHistory: newHistory 
                     });
                     this.textarea?.focus();
@@ -66,6 +71,7 @@ export default class WriteStory extends Component<Props, State> {
                     this.setState({ error: data.error });
                 }
             })
+            .then(() => this.setState({loading: false}))
     }
 
     submitLine() {
@@ -134,10 +140,67 @@ export default class WriteStory extends Component<Props, State> {
         )
     }
 
+    buildPrompt() {
+        if (!this.state.prevLine) {
+            return null;
+        }
+
+        if (!this.state.prevAuthor) {
+            return (
+                <div className="prev-story-container">
+                    <span>
+                        {this.state.prevLine}
+                    </span>
+                </div>
+            )
+        }
+
+        return (
+            <div className="prev-story-container">
+                <Row>
+                    <Col md={10}>
+                        <span>
+                            {this.state.prevLine}
+                        </span>
+                    </Col>
+                    <Col md={2}>
+                        {
+                            this.state.prevAuthor.profile_image
+                            ? <img
+                                src={this.state.prevAuthor.profile_image}
+                                className="rounded mr-0 ml-auto"
+                                style={{
+                                    display: 'block',
+                                    width: '100px'
+                                }}
+                            />
+                            : null
+                        }
+                        
+                        <span className="author-attr">
+                            {this.state.prevAuthor.first_name} {this.state.prevAuthor.last_name} (@{this.state.prevAuthor.username})
+                        </span>
+                    </Col>
+                </Row>
+            </div>
+        )
+    }
+
     buildWriteBox() {
         let lastLine: boolean = false;
         if (this.state.currIndex && this.state.maxLines) {
             lastLine = (this.state.currIndex === this.state.maxLines);
+        }
+
+        if (this.state.loading) {
+            return (
+                <div className="write-box text-center">
+                    <Spinner animation='border' />
+                    <h2 
+                        className="h2 d-inline ml-4 loading-header"
+                    >Loading...</h2>
+                </div>
+            )
         }
 
         if (!this.state.prevLine && !this.state.writingNewStory) {
@@ -146,33 +209,7 @@ export default class WriteStory extends Component<Props, State> {
 
         return (
             <div className="write-box">
-                {
-                    this.state.prevLine
-                    && <div className="prev-story-container">
-                        <Row>
-                            <Col md={10}>
-                            <span>
-                                {this.state.prevLine}
-                            </span>
-                            </Col>
-                            <Col md={2}>
-                                <img
-                                    src="https://avatars.slack-edge.com/2019-10-01/767556766834_3fbc2e31c1b1cb806389_192.png"
-                                    className="rounded mr-0 ml-auto"
-                                    style={{
-                                        display: 'block',
-                                        width: '100px'
-                                    }}
-                                />
-                                {
-                                    this.state.prevAuthor
-                                        ? <span className="author-attr">@{this.state.prevAuthor}</span>
-                                        : null
-                                }
-                            </Col>
-                        </Row>
-                    </div>
-                }
+                { this.buildPrompt() }
                 <div className="story-input-container">
                     <Row>
                         <Col>

@@ -8,14 +8,14 @@ in the #stories channel.
 import os
 from functools import partial
 import random
-from typing import TypedDict, List
+from typing import TypedDict, List, Union
 import requests
 import sys
 
 from flask import Flask, send_from_directory, request
 from .db import (
     unlock_id, lock_id, get_valid_stories, add_line, create_new_story, 
-    get_story, User, UserExistsError, add_user
+    get_story, User, UserExistsError, add_user, get_user_slack_id
 )
 
 app = Flask(__name__, static_folder='../client/build')
@@ -23,12 +23,60 @@ SLACK_WEBHOOK = os.environ.get('SLACK_WEBHOOK')
 SLACK_AUTH_TOKEN = os.environ.get('SLACK_AUTH_TOKEN')
 MAX_LINES = 5
 
+class ClientUser(TypedDict):
+    username: str
+    profile_image: str
+    first_name: str
+    last_name: str
+    slack_id: str
+
+
 class LineResponse(TypedDict):
     prevLine: str
-    prevAuthor: str
+    prevAuthor: Union[ClientUser, None]
     currIndex: int
     maxLines: int
     storyId: int
+
+
+def get_full_user(prev_user_username: Union[str, None]) -> \
+    Union[ClientUser, None]:
+    """
+    Gets a full user object by querying the slack API.
+    """
+    if not prev_user_username:
+        return None
+        
+    # Get the slack ID from the database
+    slack_id = get_user_slack_id(prev_user_username)
+
+    # Query the slack API
+    r = requests.post(
+        'https://slack.com/api/users.info',
+        data={'user': slack_id},
+        headers={
+            'Authorization': f'Bearer {SLACK_AUTH_TOKEN}'
+        }
+    )
+
+    if r.ok and (data := r.json())['ok']:
+        slack_match = data['user']
+
+        # Get the profile image if it's custom
+        profile_image = None
+        if slack_match['profile'].get('is_custom_image', False):
+            profile_image = slack_match['profile']['image_192']
+
+        return ClientUser({
+            'username': prev_user_username,
+            'profile_image': profile_image,
+            'first_name': slack_match['profile'].get('first_name'),
+            'last_name': slack_match['profile'].get('last_name'),
+            'slack_id': slack_match['id']
+        })
+    else:
+        return None
+
 
 
 def prepare_story_response(story) -> LineResponse:
@@ -40,7 +88,7 @@ def prepare_story_response(story) -> LineResponse:
 
     return LineResponse({
         'prevLine': last_line['text'],
-        'prevAuthor': last_line.get('author', ''),
+        'prevAuthor': get_full_user(last_line.get('author')),
         'currIndex': len(story['lines']) + 1,
         'maxLines': story['max_lines'],
         'storyId': story['__id'],
@@ -93,7 +141,7 @@ def get_line():
         # Tell the application to write a new story
         return {
             'prevLine': '',
-            'prevAuthor': '',
+            'prevAuthor': None,
             'currIndex': 1,
             'maxLines': MAX_LINES,
             'writingNewStory': True,
