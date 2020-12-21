@@ -13,7 +13,7 @@ FIRST_LINES = [
     "I am an invisible man."
 ]
 MAX_LINES = 3
-DB_FILE = '../stories.db'
+DB_FILE = 'stories.db'
 
 def write():
     db = UnQLite(DB_FILE)

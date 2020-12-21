@@ -36,7 +36,7 @@ def connect():
     return UnQLite(DB_PATH.format(root=current_app.root_path))
 
 
-def write_user(user: User):
+def add_user(user: User):
     """
     Writes the user to the database if there's no matching entry.
     """

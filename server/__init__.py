@@ -15,7 +15,7 @@ import sys
 from flask import Flask, send_from_directory, request
 from .db import (
     unlock_id, lock_id, get_valid_stories, add_line, create_new_story, 
-    get_story
+    get_story, User, UserExistsError, add_user
 )
 
 app = Flask(__name__, static_folder='../client/build')
@@ -60,6 +60,18 @@ def prepare_slack_message(story_lines: List[dict]) -> str:
         output.append(sub_line)
     
     return {'text': '\n'.join(output)}
+
+
+def slack_resp_to_user(slack_match: dict) -> User:
+    """
+    Repackages the Slack API response into a User object.
+    """
+    return User({
+        'display_name': slack_match['profile'].get('display_name'),
+        'slack_id': slack_match['id'],
+        'first_name': slack_match['profile'].get('first_name'),
+        'last_name': slack_match['profile'].get('last_name'),
+    })
 
 
 @app.route('/api/get_line', methods=['POST'])
@@ -141,9 +153,41 @@ def release_story():
 def verify_username():
     username = request.json.get('username')
 
-    all_users = request.post(
+    # Get information about this user and store it in the database
+    all_users = requests.post(
         'https://slack.com/api/users.list',
         headers={
             'Authorization': f'Bearer {SLACK_AUTH_TOKEN}'
         }
     )
+    if not all_users.ok:
+        return {'error': 'Could not verify user. Try again later.'}, 500
+    
+    # Filter to the users whose display name matches
+    all_users = all_users.json()
+    matching_users = filter(
+        lambda user: user['profile'].get('display_name') == username, 
+        all_users['members']
+    )
+    try:
+        match = next(matching_users)
+    except StopIteration:
+        # No matching users
+        return {
+            'error': ("Hmm... I couldn't find any matching users. Did you "
+                      "enter your display name correctly?")
+        }
+    
+    # Write the match to the database
+    user = slack_resp_to_user(match)
+    try:
+        add_user(user)
+    except UserExistsError:
+        pass
+    
+    # Reformat to send to user
+    user['username'] = user['display_name']
+    del user['display_name']
+    del user['slack_id']
+
+    return {'success': True, 'user': user}

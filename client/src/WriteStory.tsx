@@ -2,9 +2,10 @@ import React, { Component } from 'react';
 import { Alert, Button, Col, Row } from 'react-bootstrap';
 import TextareaAutosize from 'react-autosize-textarea';
 import axios from 'axios';
+import { User } from './App';
 
 interface Props {
-    username: string,
+    user: User,
 }
 
 interface State {
@@ -43,7 +44,7 @@ export default class WriteStory extends Component<Props, State> {
     getNewLine() {
         axios
             .post('/api/get_line', { 
-                username: this.props.username, 
+                username: this.props.user.username, 
                 storyId: this.state.storyId,
                 storyIdHistory: this.state.storyIdHistory
             })
@@ -70,7 +71,7 @@ export default class WriteStory extends Component<Props, State> {
     submitLine() {
         axios
             .post('/api/submit_line', {
-                username: this.props.username,
+                username: this.props.user.username,
                 storyId: this.state.storyId,
                 line: this.state.currLine
             })
@@ -87,7 +88,7 @@ export default class WriteStory extends Component<Props, State> {
     onUnload = (e: BeforeUnloadEvent) => {
         axios
             .post('/api/release_story', {
-                username: this.props.username,
+                username: this.props.user.username,
                 storyId: this.state.storyId
             })
     }
