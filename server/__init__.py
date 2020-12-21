@@ -36,18 +36,15 @@ def prepare_story_response(story) -> LineResponse:
     Prepares the story object to be injected into the state of the client
     application.
     """
-    last_line = story['lines'][-1]
-    output = {
+    last_line = story['lines'][-1] 
+
+    return LineResponse({
         'prevLine': last_line['text'],
+        'prevAuthor': last_line.get('author', ''),
         'currIndex': len(story['lines']) + 1,
         'maxLines': story['max_lines'],
-        'storyId': story['__id']
-    }
-
-    if 'author' in last_line:
-        output['prevAuthor'] = last_line['author']
-
-    return LineResponse(output)
+        'storyId': story['__id'],
+    })
 
 
 def prepare_slack_message(story_lines: List[dict]) -> str:
@@ -145,7 +142,7 @@ def verify_username():
     username = request.json.get('username')
 
     all_users = request.post(
-        'https: // slack.com/api/users.list',
+        'https://slack.com/api/users.list',
         headers={
             'Authorization': f'Bearer {SLACK_AUTH_TOKEN}'
         }
