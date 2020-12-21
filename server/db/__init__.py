@@ -75,8 +75,13 @@ def get_valid_stories(username: str, story_id_history: Set[int]):
             if not story['locked']:
                 is_locked = False
             else:
+                # Did I lock this story?
+                self_lock = story['locked_by'] == username
                 # Has the sunset time elapsed?
-                if time.time() - story['locked_at'] > STORY_EDITING_SUNSET:
+                sunset_passed = time.time() - story['locked_at'] \
+                                > STORY_EDITING_SUNSET
+                
+                if self_lock or sunset_passed:
                     # Unlock the story
                     unlock_story(story)
                     stories.update(story['__id'], story)
