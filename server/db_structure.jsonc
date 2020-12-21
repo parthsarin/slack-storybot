@@ -1,3 +1,4 @@
+/* STORIES */
 [
     {
         "__id": 1,
@@ -7,8 +8,18 @@
         "lines": [
             {
                 "text": "Once upon a time, there was an amazing unicorn named Ruth Bader Ginsburg.",
-                "author": "Minerva McGonagall",
+                "author": "Minerva McGonagall"
             }
         ]
+    }
+]
+
+/* USERS */
+[
+    {
+        "display_name": "minerva", // => this user is @minerva
+        "slack_id": "WHJ9BP8DS",
+        "first_name": "Minerva",
+        "last_name": "McGonagall"
     }
 ]
