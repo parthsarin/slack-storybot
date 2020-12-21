@@ -168,6 +168,7 @@ export default class WriteStory extends Component<Props, State> {
                             this.state.prevAuthor.profile_image
                             ? <img
                                 src={this.state.prevAuthor.profile_image}
+                                alt=""
                                 className="rounded mr-0 ml-auto"
                                 style={{
                                     display: 'block',
