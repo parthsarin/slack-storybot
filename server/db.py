@@ -79,6 +79,12 @@ def lock_id(story_id: int, username: str):
             raise LockError("This story is already locked.")
 
 
+def add_line(story_id: int, username: str, line: str):
+    """
+    Adds 
+    """
+
+
 def unlock_id(story_id: int, username: str):
     """
     Unlocks the story with the specified id if it is owned by the specified

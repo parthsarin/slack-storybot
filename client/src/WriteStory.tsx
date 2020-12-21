@@ -9,11 +9,17 @@ interface Props {
 
 interface State {
     storyId?: number,
+    storyIdHistory: number[],
+    writingNewStory?: boolean,
+
     prevLine?: string,
     prevAuthor?: string,
+
     currLine?: string,
     currIndex?: number,
+    
     maxLines?: number,
+    
     error?: string,
 }
 
@@ -24,6 +30,7 @@ export default class WriteStory extends Component<Props, State> {
         super(props);
 
         this.state = {
+            storyIdHistory: [],
             currLine: ''
         }
 
@@ -32,11 +39,23 @@ export default class WriteStory extends Component<Props, State> {
 
     getNewLine() {
         axios
-            .post('/api/get_line', { username: this.props.username, storyId: this.state.storyId })
+            .post('/api/get_line', { 
+                username: this.props.username, 
+                storyId: this.state.storyId,
+                storyIdHistory: this.state.storyIdHistory
+            })
             .then(r => r.data)
             .then((data) => {
                 if (!data.error) {
-                    this.setState({ ...data });
+                    let newHistory = [...this.state.storyIdHistory];
+                    if (data.storyId !== undefined) {
+                        newHistory.push(data.storyId);
+                    }
+                    this.setState({ 
+                        ...data, 
+                        currLine: '', 
+                        storyIdHistory: newHistory 
+                    });
                     this.textarea?.focus();
                 } else {
                     this.setState({ error: data.error });
@@ -51,7 +70,7 @@ export default class WriteStory extends Component<Props, State> {
     buildButtonBar() {
         const showSubmit: boolean = Boolean(this.state.prevLine);
         const allowSubmit: boolean = Boolean(this.state.currLine);
-        
+
         return (
             <Row className="mt-2">
                 <Col className="text-center">
@@ -83,28 +102,35 @@ export default class WriteStory extends Component<Props, State> {
             lastLine = (this.state.currIndex === this.state.maxLines);
         }
 
-        if (!this.state.prevLine) {
+        if (!this.state.prevLine && !this.state.writingNewStory) {
             return null;
         }
 
         return (
             <div className="write-box">
-                <div className="prev-story-container text-center">
-                    <span>
-                        {this.state.prevLine}
-                    </span>
-                    {
-                        this.state.prevAuthor
-                            ? <span className="author-attr">@{this.state.prevAuthor}</span>
-                            : null
-                    }
-                </div>
+                {
+                    this.state.prevLine
+                    && <div className="prev-story-container text-center">
+                        <span>
+                            {this.state.prevLine}
+                        </span>
+                        {
+                            this.state.prevAuthor
+                                ? <span className="author-attr">@{this.state.prevAuthor}</span>
+                                : null
+                        }
+                    </div>
+                }
                 <div className="story-input-container">
                     <Row>
                         <Col>
                             <TextareaAutosize
                                 className="story-input"
-                                placeholder="> Continue the story..."
+                                placeholder={
+                                    this.state.writingNewStory
+                                    ? "> Start a new story..."
+                                    : "> Continue the story..."
+                                }
                                 value={this.state.currLine}
                                 ref={(r) => this.textarea = r}
                                 onChange={(e) => {
