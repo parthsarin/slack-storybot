@@ -8,19 +8,20 @@ in the #stories channel.
 import os
 from functools import partial
 import random
-from typing import TypedDict, Set, List
+from typing import TypedDict, List
 import requests
-from datetime import timedelta
+import sys
 
 from flask import Flask, send_from_directory, request
 from .db import (
-    unlock_id, lock_id, get_stories, add_line, create_new_story, get_story
+    unlock_id, lock_id, get_valid_stories, add_line, create_new_story, 
+    get_story
 )
 
 app = Flask(__name__, static_folder='../client/build')
 SLACK_WEBHOOK = os.environ.get('SLACK_WEBHOOK')
+SLACK_AUTH_TOKEN = os.environ.get('SLACK_AUTH_TOKEN')
 MAX_LINES = 5
-STORY_EDITING_SUNSET = timedelta(minutes=3) # after which the story will unlock
 
 class LineResponse(TypedDict):
     prevLine: str
@@ -28,27 +29,6 @@ class LineResponse(TypedDict):
     currIndex: int
     maxLines: int
     storyId: int
-
-
-def valid_user_story(story, username: str, story_id_history: Set[int]) -> bool:
-    """
-    Determines whether this is a valid story that the user can claim.
-
-    Arguments
-    ---------
-    story -- The story to check.
-    story_id_history -- The past story IDs that the user has seen.
-    username -- The user who is trying to claim the story.
-    """
-    is_locked = story['locked']
-    user_contributed = username in {
-        line['author'] 
-        for line in story['lines']
-        if 'author' in line
-    }
-    is_fresh = story['__id'] not in story_id_history
-
-    return (not is_locked) and (not user_contributed) and is_fresh
 
 
 def prepare_story_response(story) -> LineResponse:
@@ -82,7 +62,7 @@ def prepare_slack_message(story_lines: List[dict]) -> str:
             sub_line += f" (@{line['author']})"
         output.append(sub_line)
     
-    return '\n'.join(output)
+    return {'text': '\n'.join(output)}
 
 
 @app.route('/api/get_line', methods=['POST'])
@@ -97,12 +77,7 @@ def get_line():
         unlock_id(story_id, username)
     
     # Pick a story 
-    filter_criteria = partial(
-        valid_user_story, 
-        username=username, 
-        story_id_history=story_id_history
-    )
-    story_options = get_stories(filter_criteria)
+    story_options = get_valid_stories(username, story_id_history)
     try:
         story = random.choice(story_options)
     except IndexError:
@@ -145,9 +120,33 @@ def submit_line():
     if story['max_lines'] == len(story['lines']):
         requests.post(
             SLACK_WEBHOOK, 
-            data=prepare_slack_message(story['lines']),
+            json=prepare_slack_message(story['lines']),
             headers={
                 'Content-Type': 'application/json'
             }
         )
-        return {'success': True}
+    return {'success': True}
+
+
+@app.route('/api/release_story', methods=['POST'])
+def release_story():
+    username = request.json.get('username')
+    story_id = request.json.get('storyId')
+
+    # Unlock the story that the user is currently holding
+    if story_id:
+        unlock_id(story_id, username)
+
+    return {'success': True}
+
+
+@app.route('/api/verify_username', methods=['POST'])
+def verify_username():
+    username = request.json.get('username')
+
+    all_users = request.post(
+        'https: // slack.com/api/users.list',
+        headers={
+            'Authorization': f'Bearer {SLACK_AUTH_TOKEN}'
+        }
+    )

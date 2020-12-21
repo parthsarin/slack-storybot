@@ -6,10 +6,11 @@ Handles interactions with the database.
 """
 from flask import current_app
 from unqlite import UnQLite
-from typing import Callable
-from datetime import datetime, timedelta
+from typing import Callable, Set
+import time
 
 DB_PATH = '{root}/stories.db'
+STORY_EDITING_SUNSET = 180 # seconds after which the story will unlock
 class LockError(ValueError):
     """
     Unable to acquire or release the lock.
@@ -23,15 +24,47 @@ def connect():
     return UnQLite(DB_PATH.format(root=current_app.root_path))
 
 
-def get_stories(filter_criteria: Callable[[dict], bool] = lambda d: True):
+def get_valid_stories(username: str, story_id_history: Set[int]):
     """
     Returns all stories that match the filter criteria.
     """
     db = connect()
 
+    output = []
     with db.transaction():
         stories = db.collection('stories')
-        return stories.filter(filter_criteria)
+        for story in stories.all():
+            # Should we include the story?
+            in_progress = len(story['lines']) < story['max_lines']
+            user_contributed = username in {
+                line['author']
+                for line in story['lines']
+                if 'author' in line
+            }
+            is_fresh = story['__id'] not in story_id_history
+
+            if not story['locked']:
+                is_locked = False
+            else:
+                # Has the sunset time elapsed?
+                if time.time() - story['locked_at'] > STORY_EDITING_SUNSET:
+                    # Unlock the story
+                    unlock_story(story)
+                    stories.update(story['__id'], story)
+
+                is_locked = story['locked']
+
+            include_story = (
+                in_progress
+                and (not is_locked)
+                and (not user_contributed)
+                and is_fresh
+            )
+
+            if include_story:
+                output.append(story)
+
+    return output
 
 
 def get_story(story_id: int) -> int:
@@ -56,7 +89,7 @@ def lock_story(story, username: str):
     """
     story['locked'] = True
     story['locked_by'] = username
-    story['locked_at'] = datetime.now()
+    story['locked_at'] = time.time()
 
 
 def unlock_story(story):
@@ -81,7 +114,6 @@ def lock_id(story_id: int, username: str):
     story_id -- The id of the story to unlock.
     username -- The user who wants to lock the story.
     """
-    print(f"Locking {story_id} for {username}")
     db = connect()
 
     with db.transaction():
@@ -93,11 +125,6 @@ def lock_id(story_id: int, username: str):
             stories.update(story_id, target_story)
         else:
             raise LockError("This story is already locked.")
-    
-    with db.transaction():
-        stories = db.collection('stories')
-        target_story = stories.fetch(story_id)
-        print(target_story)
 
 
 def add_line(story_id: int, username: str, line: str):
@@ -121,6 +148,7 @@ def add_line(story_id: int, username: str, line: str):
                 'text': line,
                 'author': username
             })
+            unlock_story(story)
             stories.update(story_id, story)
         else:
             raise LockError("Can't write to a story you haven't locked.")
@@ -170,32 +198,13 @@ def unlock_id(story_id: int, username: str):
         stories = db.collection('stories')
         target_story = stories.fetch(story_id)
 
+        if not target_story:
+            # Maybe id == -1?
+            return
+
         if target_story['locked']:
             if target_story['locked_by'] == username:
                 unlock_story(target_story)
                 stories.update(story_id, target_story)
             else:
                 raise LockError("Can't unlock a story that you didn't lock.")
-
-
-def is_locked(story_id: int, sunset_time: timedelta) -> bool:
-    """
-    Checks if the story is locked (either that it is locked or it has 
-    sunsetted). Unlocks the story if it has sunsetted.
-    """
-    db = connect()
-
-    with db.transaction():
-        stories = db.collection('stories')
-        story = stories.fetch(story_id)
-
-        if not story['is_locked']:
-            return False
-        
-        # Has the sunset time elapsed?
-        if datetime.now() - story['locked_at'] > sunset_time:
-            # Unlock the story
-            unlock_story(story)
-            stories.update(story_id, story)
-        
-        return story['is_locked']

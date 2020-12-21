@@ -54,7 +54,8 @@ export default class WriteStory extends Component<Props, State> {
                     if (data.storyId !== undefined) {
                         newHistory.push(data.storyId);
                     }
-                    this.setState({ 
+                    this.setState({
+                        prevAuthor: '', 
                         ...data, 
                         currLine: '', 
                         storyIdHistory: newHistory 
@@ -83,12 +84,27 @@ export default class WriteStory extends Component<Props, State> {
             })
     }
 
+    onUnload = (e: BeforeUnloadEvent) => {
+        axios
+            .post('/api/release_story', {
+                username: this.props.username,
+                storyId: this.state.storyId
+            })
+    }
+
     componentDidMount() {
         this.getNewLine();
+        window.addEventListener('beforeunload', this.onUnload);
+    }
+
+    componentWillUnmount() {
+        window.removeEventListener('beforeunload', this.onUnload);
     }
 
     buildButtonBar() {
-        const showSubmit: boolean = Boolean(this.state.prevLine);
+        const showSubmit: boolean = Boolean(
+            this.state.prevLine || this.state.writingNewStory
+        );
         const allowSubmit: boolean = Boolean(this.state.currLine);
 
         return (
@@ -131,15 +147,29 @@ export default class WriteStory extends Component<Props, State> {
             <div className="write-box">
                 {
                     this.state.prevLine
-                    && <div className="prev-story-container text-center">
-                        <span>
-                            {this.state.prevLine}
-                        </span>
-                        {
-                            this.state.prevAuthor
-                                ? <span className="author-attr">@{this.state.prevAuthor}</span>
-                                : null
-                        }
+                    && <div className="prev-story-container">
+                        <Row>
+                            <Col md={10}>
+                            <span>
+                                {this.state.prevLine}
+                            </span>
+                            </Col>
+                            <Col md={2}>
+                                <img
+                                    src="https://avatars.slack-edge.com/2019-10-01/767556766834_3fbc2e31c1b1cb806389_192.png"
+                                    className="rounded mr-0 ml-auto"
+                                    style={{
+                                        display: 'block',
+                                        width: '100px'
+                                    }}
+                                />
+                                {
+                                    this.state.prevAuthor
+                                        ? <span className="author-attr">@{this.state.prevAuthor}</span>
+                                        : null
+                                }
+                            </Col>
+                        </Row>
                     </div>
                 }
                 <div className="story-input-container">
