@@ -46,7 +46,7 @@ def get_full_user(prev_user_username: Union[str, None]) -> \
     """
     if not prev_user_username:
         return None
-        
+
     # Get the slack ID from the database
     slack_id = get_user_slack_id(prev_user_username)
 
@@ -103,8 +103,8 @@ def prepare_slack_message(story_lines: List[dict]) -> str:
     output = []
     for line in story_lines:
         sub_line = f"{line['text']}"
-        if 'author' in line:
-            sub_line += f" (@{line['author']})"
+        if 'author' in line and (slack_id := get_user_slack_id(line['author'])):
+            sub_line += f" (<@{slack_id}>)"
         output.append(sub_line)
     
     return {'text': '\n'.join(output)}
@@ -213,10 +213,16 @@ def verify_username():
     
     # Filter to the users whose display name matches
     all_users = all_users.json()
-    matching_users = filter(
-        lambda user: user['profile'].get('display_name') == username, 
-        all_users['members']
-    )
+    def user_matches(user):
+        """
+        Returns whether a user matches the queried username.
+        """
+        if display_name := user['profile'].get('display_name'):
+            return display_name == username
+        else:
+            return user['profile'].get('real_name') == username
+    
+    matching_users = filter(user_matches, all_users['members'])
     try:
         match = next(matching_users)
     except StopIteration:
