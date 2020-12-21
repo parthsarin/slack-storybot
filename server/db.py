@@ -6,7 +6,7 @@ Handles interactions with the database.
 """
 from flask import current_app
 from unqlite import UnQLite
-from typing import Callable, Set
+from typing import Callable, Set, TypedDict
 import time
 
 DB_PATH = '{root}/stories.db'
@@ -16,12 +16,41 @@ class LockError(ValueError):
     Unable to acquire or release the lock.
     """
 
+class UserExistsError(KeyError):
+    """
+    The user already exists in the database.
+    """
+
+
+class User(TypedDict):
+    display_name: str
+    slack_id: str
+    first_name: str
+    last_name: str
+
 
 def connect():
     """
     Connects to the database and returns the database connection.
     """
     return UnQLite(DB_PATH.format(root=current_app.root_path))
+
+
+def write_user(user: User):
+    """
+    Writes the user to the database if there's no matching entry.
+    """
+    db = connect()
+
+    with db.transaction():
+        users = db.collection('users')
+        same_name = users.filter(
+            lambda u: u['display_name'] == user.get('display_name')
+        )
+        if same_name:
+            raise UserExistsError("The user already exists.")
+        else:
+            users.store([user])
 
 
 def get_valid_stories(username: str, story_id_history: Set[int]):

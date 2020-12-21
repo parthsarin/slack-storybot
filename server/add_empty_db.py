@@ -18,6 +18,9 @@ DB_FILE = 'stories.db'
 def write():
     db = UnQLite(DB_FILE)
 
+    with db.transaction():
+        db.collection('users').create()
+
     for line in FIRST_LINES:
         with db.transaction():
             stories = db.collection('stories')
