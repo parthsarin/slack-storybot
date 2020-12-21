@@ -35,6 +35,9 @@ export default class WriteStory extends Component<Props, State> {
         }
 
         this.textarea = null;
+
+        this.submitLine = this.submitLine.bind(this);
+        this.getNewLine = this.getNewLine.bind(this);
     }
 
     getNewLine() {
@@ -63,6 +66,23 @@ export default class WriteStory extends Component<Props, State> {
             })
     }
 
+    submitLine() {
+        axios
+            .post('/api/submit_line', {
+                username: this.props.username,
+                storyId: this.state.storyId,
+                line: this.state.currLine
+            })
+            .then(r => r.data)
+            .then((data) => {
+                if (data.error) {
+                    this.setState({ error: data.error })
+                } else {
+                    this.getNewLine();
+                }
+            })
+    }
+
     componentDidMount() {
         this.getNewLine();
     }
@@ -86,6 +106,7 @@ export default class WriteStory extends Component<Props, State> {
                             variant="success"
                             className="submit-btn ml-3"
                             disabled={!allowSubmit}
+                            onClick={() => this.submitLine()}
                         >
                             Submit!
                         </Button>

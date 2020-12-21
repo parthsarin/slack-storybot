@@ -12,7 +12,7 @@ FIRST_LINES = [
     "In my younger and more vulnerable years my father gave me some advice that I've been turning over in my mind ever since.",
     "I am an invisible man."
 ]
-MAX_LINES = 5
+MAX_LINES = 3
 DB_FILE = 'stories.db'
 
 def write():
@@ -35,6 +35,7 @@ def write():
                     "max_lines": MAX_LINES,
                     "locked": False,
                     "locked_by": None,
+                    "locked_at": None,
                     "lines": [
                         {
                             "text": line

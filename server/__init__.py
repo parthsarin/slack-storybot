@@ -8,14 +8,19 @@ in the #stories channel.
 import os
 from functools import partial
 import random
-from typing import TypedDict, Set
+from typing import TypedDict, Set, List
+import requests
+from datetime import timedelta
 
 from flask import Flask, send_from_directory, request
-from .db import unlock_id, lock_id, get_stories
+from .db import (
+    unlock_id, lock_id, get_stories, add_line, create_new_story, get_story
+)
 
 app = Flask(__name__, static_folder='../client/build')
 SLACK_WEBHOOK = os.environ.get('SLACK_WEBHOOK')
 MAX_LINES = 5
+STORY_EDITING_SUNSET = timedelta(minutes=3) # after which the story will unlock
 
 class LineResponse(TypedDict):
     prevLine: str
@@ -65,13 +70,27 @@ def prepare_story_response(story) -> LineResponse:
     return LineResponse(output)
 
 
+def prepare_slack_message(story_lines: List[dict]) -> str:
+    """
+    Compiles each of the story lines into a multiline string for posting in the
+    Slack channel.
+    """
+    output = []
+    for line in story_lines:
+        sub_line = f"{line['text']}"
+        if 'author' in line:
+            sub_line += f" (@{line['author']})"
+        output.append(sub_line)
+    
+    return '\n'.join(output)
+
+
 @app.route('/api/get_line', methods=['POST'])
 def get_line():
     username = request.json.get('username')
     story_id = request.json.get('storyId')
     story_id_history = request.json.get('storyIdHistory', [])
     story_id_history = set(story_id_history) | {story_id}
-    print(story_id_history)
 
     # Unlock the story that the user is currently holding
     if story_id:
@@ -93,7 +112,8 @@ def get_line():
             'prevAuthor': '',
             'currIndex': 1,
             'maxLines': MAX_LINES,
-            'writingNewStory': True
+            'writingNewStory': True,
+            'storyId': -1
         }
     
     # Lock the story
@@ -107,3 +127,27 @@ def submit_line():
     username = request.json.get('username')
     story_id = request.json.get('storyId')
     line = request.json.get('line')
+
+    if not isinstance(story_id, int):
+        return {'error': 'Malformed request - storyId should be an integer.'}
+    
+    if story_id == -1:
+        # Create new story
+        create_new_story(MAX_LINES, {
+            'text': line,
+            'author': username
+        })
+        return {'success': True}
+
+    # Add the line and post in the Slack if this was the last line
+    add_line(story_id, username, line)
+    story = get_story(story_id)
+    if story['max_lines'] == len(story['lines']):
+        requests.post(
+            SLACK_WEBHOOK, 
+            data=prepare_slack_message(story['lines']),
+            headers={
+                'Content-Type': 'application/json'
+            }
+        )
+        return {'success': True}
