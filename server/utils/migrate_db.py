@@ -56,7 +56,7 @@ def build_schema():
                 max_lines int DEFAULT 10,
                 locked    bool DEFAULT FALSE,
                 locked_by int DEFAULT NULL,
-                locked_at timestamp DEFAULT NULL,
+                locked_at timestamp DEFAULT(STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
             
                 FOREIGN KEY (locked_by) REFERENCES Users(id)
             );
@@ -104,7 +104,7 @@ def migrate_stories():
             cursor.execute(
                 """
                 INSERT INTO Stories (max_lines, locked, locked_by, locked_at)
-                VALUES (?, ?, ?, ?);
+                VALUES (?, ?, (SELECT id FROM Users WHERE display_name=?), ?);
                 """,
                 (story['max_lines'], story['locked'], story['locked_by'],
                 datetime.fromtimestamp(story['locked_at']) \

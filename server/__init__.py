@@ -12,10 +12,11 @@ from typing import TypedDict, List, Union
 import requests
 import sys
 
-from flask import Flask, send_from_directory, request
+from flask import Flask, send_from_directory, request, g
 from .db import (
     unlock_id, lock_id, get_valid_stories, add_line, create_new_story, 
-    get_story, User, UserExistsError, add_user, get_user_slack_id
+    get_story, User, UserExistsError, add_user, get_user_slack_id,
+    get_last_line
 )
 
 app = Flask(__name__, static_folder='../client/build')
@@ -39,6 +40,13 @@ class LineResponse(TypedDict):
     storyId: int
 
 
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
+
+
 def get_full_user(prev_user_username: Union[str, None]) -> \
     Union[ClientUser, None]:
     """
@@ -48,7 +56,7 @@ def get_full_user(prev_user_username: Union[str, None]) -> \
         return None
 
     # Get the slack ID from the database
-    slack_id = get_user_slack_id(prev_user_username)
+    slack_id = get_user_slack_id(prev_user_username)['slack_id']
 
     # Query the slack API
     r = requests.post(
@@ -84,14 +92,14 @@ def prepare_story_response(story) -> LineResponse:
     Prepares the story object to be injected into the state of the client
     application.
     """
-    last_line = story['lines'][-1] 
+    last_line = get_last_line(story['id'])
 
     return LineResponse({
         'prevLine': last_line['text'],
-        'prevAuthor': get_full_user(last_line.get('author')),
-        'currIndex': len(story['lines']) + 1,
+        'prevAuthor': get_full_user(last_line.get('username')),
+        'currIndex': last_line['line_idx'] + 2,
         'maxLines': story['max_lines'],
-        'storyId': story['__id'],
+        'storyId': story['id'],
     })
 
 
@@ -114,8 +122,10 @@ def slack_resp_to_user(slack_match: dict) -> User:
     """
     Repackages the Slack API response into a User object.
     """
+    display_name = slack_match['profile'].get('display_name')
+    real_name = slack_match['profile'].get('real_name')
     return User({
-        'display_name': slack_match['profile'].get('display_name'),
+        'display_name': display_name if display_name else real_name,
         'slack_id': slack_match['id'],
         'first_name': slack_match['profile'].get('first_name'),
         'last_name': slack_match['profile'].get('last_name'),
@@ -149,7 +159,7 @@ def get_line():
         }
     
     # Lock the story
-    lock_id(story['__id'], username)
+    lock_id(story['id'], username)
 
     return prepare_story_response(story)
 

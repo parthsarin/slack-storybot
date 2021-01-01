@@ -1,9 +1,10 @@
 -- SCHEMA
 CREATE TABLE IF NOT EXISTS Users (
-  id int AUTO_INCREMENT,
+  id           INTEGER PRIMARY KEY,
   display_name varchar(255),
-  slack_id varchar(255),
-  PRIMARY KEY (id)
+  slack_id     varchar(255),
+  first_name   varchar(255),
+  last_name    varchar(255)
 );
 
 CREATE TABLE IF NOT EXISTS Stories (
