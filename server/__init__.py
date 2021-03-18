@@ -57,7 +57,7 @@ def get_full_user(prev_user_username: Union[str, None]) -> \
 
     # Get the slack ID from the database
     slack_id = get_user_slack_id(prev_user_username)['slack_id']
-
+    return None
     # Query the slack API
     r = requests.post(
         'https://slack.com/api/users.info',
@@ -84,7 +84,6 @@ def get_full_user(prev_user_username: Union[str, None]) -> \
         })
     else:
         return None
-
 
 
 def prepare_story_response(story) -> LineResponse:

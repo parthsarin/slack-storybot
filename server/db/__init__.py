@@ -316,6 +316,7 @@ def add_line(story_id: int, username: str, line: str):
     username -- The user who is editing the story.
     line -- The line that the user has written.
     """
+    breakpoint()
     next_idx = query_db(
         """
         SELECT MAX(b.line_idx)
